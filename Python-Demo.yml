@@ -1,0 +1,21 @@
+name: Setup Python
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  setup-python:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+          cache: pip
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
