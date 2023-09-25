@@ -1,0 +1,75 @@
+name: Unit Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      CUSTOMER:
+        description: Customer name (e.g., ncoint)
+        required: true
+        type: string
+      CUSTOMER_ENVIRONMENT:
+        description: Customer environment (e.g., aparmar-sandbox)
+        required: true
+        type: string
+      AWS_REGION:
+        description: AWS region
+        required: true
+        default: eu-west-1
+        type: choice
+        options:
+          - ap-northeast-1
+          - ap-southeast-1
+          - ap-southeast-2
+          - ca-central-1
+          - eu-central-1
+          - eu-west-1
+          - eu-west-2
+          - eu-west-3
+          - us-east-1
+      SITE_URL:
+        description: Site URL (e.g., aparmar.beta.nuxeocloud.com)
+        required: true
+        type: string
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::188670881089:role/NcoGitHubActionsRole
+          role-session-name: GithubActionsSession
+          aws-region: ${{ inputs.AWS_REGION || 'eu-west-1' }}
+
+      - name: Read secrets from AWS Secrets Manager into environment variables
+        uses: aws-actions/aws-secretsmanager-get-secrets@v1
+        with:
+          secret-ids: |
+            ${{ inputs.CUSTOMER || 'ncoint' }}/${{ inputs.CUSTOMER_ENVIRONMENT || 'aparmar-sandbox' }}/nuxeo
+          parse-json-secrets: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+          cache: pip
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Unit Tests
+        run: python -m pytest test
+        env:
+          SITE_URL: ${{ inputs.SITE_URL || 'aparmar.beta.nuxeocloud.com' }}
